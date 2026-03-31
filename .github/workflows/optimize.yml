@@ -11,27 +11,25 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Download
+      - name: Test IPs
         run: |
-          curl -sL -o cf.tar.gz "https://github.com/XIU2/CloudflareSpeedTest/releases/download/v2.2.5/CloudflareSpeedTest_linux_amd64.tar.gz"
-          ls -la cf.tar.gz
-          tar -tzf cf.tar.gz
-          tar -xzf cf.tar.gz
-          ls -la
+          ips="1.1.1.1 1.0.0.1 104.16.132.229 104.16.133.229"
+          best_ip=""
+          best_time=9999
+          for ip in $ips; do
+            time=$(ping -c 3 -W 2 $ip 2>/dev/null | tail -1 | awk -F'/' '{print $5}')
+            if [ -n "$time" ]; then
+              echo "$ip: ${time}ms"
+              if (( $(echo "$time < $best_time" | bc -l) )); then
+                best_time=$time
+                best_ip=$ip
+              fi
+            fi
+          done
+          echo "BEST_IP=$best_ip" >> $GITHUB_ENV
+          echo "Best: $best_ip"
 
-      - name: Run
-        run: |
-          ls -la CloudflareSpeedTest || echo "NOT FOUND"
-          chmod +x CloudflareSpeedTest 2>/dev/null || true
-          ./CloudflareSpeedTest -n 5 || echo "FAILED"
-
-      - name: Parse
-        run: |
-          ip=$(grep -oP '^\d+\.\d+\.\d+\.\d+' result.txt | head -1)
-          echo "IP=$ip"
-          echo "BEST_IP=$ip" >> $GITHUB_ENV
-
-      - name: Gen
+      - name: Generate
         run: |
           ip="${BEST_IP:-1.1.1.1}"
           cfg="{\"add\":\"$ip\",\"aid\":\"0\",\"host\":\"why2583.xyz\",\"id\":\"4dac7bd2-1777-4696-83a5-bb6c26813c8f\",\"net\":\"ws\",\"path\":\"/ws\",\"port\":\"443\",\"ps\":\"CF\",\"tls\":\"tls\",\"type\":\"none\",\"v\":\"2\"}"
