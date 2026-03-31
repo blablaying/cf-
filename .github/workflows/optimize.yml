@@ -12,35 +12,41 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Download Tool
+      - name: Debug Info
         run: |
-          wget -O cf.tar.gz https://github.com/XIU2/CloudflareSpeedTest/releases/latest/download/CloudflareSpeedTest_linux_amd64.tar.gz
+          uname -a
+          pwd
+          ls -la
+
+      - name: Download
+        run: |
+          wget https://github.com/XIU2/CloudflareSpeedTest/releases/download/v2.2.5/CloudflareSpeedTest_linux_amd64.tar.gz -O cf.tar.gz
           tar -xzf cf.tar.gz
           ls -la
-          chmod +x CloudflareSpeedTest
 
-      - name: Test
+      - name: Run Test
         run: |
-          ./CloudflareSpeedTest -n 50 -t 4 -tl 300 -sl 1 -p 0 2>&1 | tee result.txt || true
+          ./CloudflareSpeedTest -n 20 -t 2 -tl 300 -sl 1 -tp 443 > result.txt 2>&1 || echo "Exit: $?"
+          cat result.txt
 
-      - name: Parse
+      - name: Get IP
         run: |
-          if [ -f result.txt ]; then
-            ip=$(grep -oP '\d+\.\d+\.\d+\.\d+' result.txt | head -1)
-            echo "BEST_IP=$ip" >> $GITHUB_ENV
-            echo "IP: $ip"
-          fi
+          ip=$(awk '/^[0-9]/ {print $1; exit}' result.txt)
+          echo "IP: $ip"
+          echo "BEST_IP=$ip" >> $GITHUB_ENV
 
-      - name: Generate
+      - name: Create Subscribe
         run: |
           if [ -n "$BEST_IP" ]; then
-            cfg="{\"v\":\"2\",\"ps\":\"CF\",\"add\":\"${BEST_IP}\",\"port\":\"443\",\"id\":\"4dac7bd2-1777-4696-83a5-bb6c26813c8f\",\"aid\":\"0\",\"net\":\"ws\",\"host\":\"why2583.xyz\",\"path\":\"/ws\",\"tls\":\"tls\"}"
-            echo "vmess://$(echo -n "$cfg" | base64 -w 0)" > subscribe.txt
+            data="{\"v\":\"2\",\"ps\":\"CF\",\"add\":\"${BEST_IP}\",\"port\":\"443\",\"id\":\"4dac7bd2-1777-4696-83a5-bb6c26813c8f\",\"aid\":\"0\",\"net\":\"ws\",\"host\":\"why2583.xyz\",\"path\":\"/ws\",\"tls\":\"tls\"}"
+            echo "vmess://$(echo -n "$data" | base64 -w 0)" > subscribe.txt
+            echo "Generated: $(cat subscribe.txt)"
           else
-            echo "No IP found" > subscribe.txt
+            echo "No IP"
+            echo "vmess://placeholder" > subscribe.txt
           fi
 
-      - name: Push
+      - name: Commit
         run: |
           git config user.name "bot"
           git config user.email "bot@github.com"
