@@ -5,6 +5,9 @@ on:
     - cron: '0 */6 * * *'
   workflow_dispatch:
 
+permissions:
+  contents: write
+
 jobs:
   optimize:
     runs-on: ubuntu-latest
@@ -14,7 +17,7 @@ jobs:
       - name: Test IPs
         run: |
           ips="1.1.1.1 1.0.0.1 104.16.132.229 104.16.133.229"
-          best_ip=""
+          best_ip="1.1.1.1"
           best_time=9999
           for ip in $ips; do
             time=$(ping -c 3 -W 2 $ip 2>/dev/null | tail -1 | awk -F'/' '{print $5}')
@@ -31,15 +34,12 @@ jobs:
 
       - name: Generate
         run: |
-          ip="${BEST_IP:-1.1.1.1}"
+          ip="${{ env.BEST_IP }}"
           cfg="{\"add\":\"$ip\",\"aid\":\"0\",\"host\":\"why2583.xyz\",\"id\":\"4dac7bd2-1777-4696-83a5-bb6c26813c8f\",\"net\":\"ws\",\"path\":\"/ws\",\"port\":\"443\",\"ps\":\"CF\",\"tls\":\"tls\",\"type\":\"none\",\"v\":\"2\"}"
           echo "vmess://$(echo -n "$cfg" | base64 -w0)" > subscribe.txt
           cat subscribe.txt
 
-      - name: Push
-        run: |
-          git config user.name "bot"
-          git config user.email "a@b.com"
-          git add -A
-          git commit -m "update" || true
-          git push
+      - uses: stefanzweifel/git-auto-commit-action@v5
+        with:
+          commit_message: "update ${{ env.BEST_IP }}"
+          file_pattern: subscribe.txt
