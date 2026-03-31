@@ -31,13 +31,13 @@ jobs:
           while read t ip; do
             [ -z "$ip" ] && continue
             uuid="4dac7bd2-1777-4696-83a5-bb6c26813c8f"
-            node="vless://${uuid}@${ip}:443?encryption=none&security=tls&sni=why2583.xyz&fp=chrome&type=ws&host=why2583.xyz&path=%2Fws#CF-${n}"
+            node="vless://${uuid}@${ip}:443?encryption=none&security=tls&sni=why2583.xyz&fp=chrome&type=ws&host=why2583.xyz&path=%2F%3Fed%3D2048#CF-${n}"
             echo "$node" >> subscribe.txt
             ((n++))
           done < best.txt
           
           if [ ! -s subscribe.txt ]; then
-            echo "vless://4dac7bd2-1777-4696-83a5-bb6c26813c8f@1.1.1.1:443?encryption=none&security=tls&sni=why2583.xyz&type=ws&host=why2583.xyz&path=%2Fws#CF-1" >> subscribe.txt
+            echo "vless://4dac7bd2-1777-4696-83a5-bb6c26813c8f@1.1.1.1:443?encryption=none&security=tls&sni=why2583.xyz&fp=chrome&type=ws&host=why2583.xyz&path=%2F%3Fed%3D2048#CF-1" >> subscribe.txt
           fi
           cat subscribe.txt
 
