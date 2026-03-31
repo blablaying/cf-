@@ -12,32 +12,38 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Download CloudflareSpeedTest
+      - name: Download Tool
         run: |
-          wget https://github.com/XIU2/CloudflareSpeedTest/releases/latest/download/CloudflareSpeedTest_linux_amd64.tar.gz
-          tar -xzf CloudflareSpeedTest_linux_amd64.tar.gz
+          wget -O cf.tar.gz https://github.com/XIU2/CloudflareSpeedTest/releases/latest/download/CloudflareSpeedTest_linux_amd64.tar.gz
+          tar -xzf cf.tar.gz
+          ls -la
           chmod +x CloudflareSpeedTest
 
-      - name: Run Speed Test
-        run: ./CloudflareSpeedTest -n 200 -t 4 -tl 200 -sl 1 -p 0 > result.txt
-
-      - name: Get Best IP
+      - name: Test
         run: |
-          best_ip=$(sed -n '2p' result.txt | awk '{print $1}')
-          echo "BEST_IP=$best_ip" >> $GITHUB_ENV
-          echo "Best IP: $best_ip"
+          ./CloudflareSpeedTest -n 50 -t 4 -tl 300 -sl 1 -p 0 2>&1 | tee result.txt || true
 
-      - name: Generate Config
+      - name: Parse
         run: |
-          vmess_config="{\"v\":\"2\",\"ps\":\"CF-Auto\",\"add\":\"${BEST_IP}\",\"port\":\"443\",\"id\":\"4dac7bd2-1777-4696-83a5-bb6c26813c8f\",\"aid\":\"0\",\"net\":\"ws\",\"type\":\"none\",\"host\":\"proxy.why2583.xyz\",\"path\":\"/ws\",\"tls\":\"tls\"}"
-          encoded=$(echo -n "$vmess_config" | base64 -w 0)
-          echo "vmess://${encoded}" > subscribe.txt
-          echo "Generated subscription"
+          if [ -f result.txt ]; then
+            ip=$(grep -oP '\d+\.\d+\.\d+\.\d+' result.txt | head -1)
+            echo "BEST_IP=$ip" >> $GITHUB_ENV
+            echo "IP: $ip"
+          fi
 
-      - name: Commit
+      - name: Generate
         run: |
-          git config user.name "github-actions"
-          git config user.email "actions@github.com"
+          if [ -n "$BEST_IP" ]; then
+            cfg="{\"v\":\"2\",\"ps\":\"CF\",\"add\":\"${BEST_IP}\",\"port\":\"443\",\"id\":\"4dac7bd2-1777-4696-83a5-bb6c26813c8f\",\"aid\":\"0\",\"net\":\"ws\",\"host\":\"why2583.xyz\",\"path\":\"/ws\",\"tls\":\"tls\"}"
+            echo "vmess://$(echo -n "$cfg" | base64 -w 0)" > subscribe.txt
+          else
+            echo "No IP found" > subscribe.txt
+          fi
+
+      - name: Push
+        run: |
+          git config user.name "bot"
+          git config user.email "bot@github.com"
           git add subscribe.txt
-          git diff --staged --quiet || git commit -m "Update IP: ${BEST_IP}"
-          git push
+          git commit -m "update" || true
+          git push || true
