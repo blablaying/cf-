@@ -1,0 +1,43 @@
+name: CF优选IP
+
+on:
+  schedule:
+    - cron: '0 */6 * * *'  # 每6小时运行一次
+  workflow_dispatch:  # 手动触发
+
+jobs:
+  optimize:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+
+      - name: Download CloudflareSpeedTest
+        run: |
+          wget https://github.com/XIU2/CloudflareSpeedTest/releases/latest/download/CloudflareSpeedTest_linux_amd64.tar.gz
+          tar -xzf CloudflareSpeedTest_linux_amd64.tar.gz
+
+      - name: Run Speed Test
+        run: |
+          chmod +x CloudflareSpeedTest
+          ./CloudflareSpeedTest -n 200 -t 4 -tl 200 -sl 1 -p 0 > result.txt
+
+      - name: Parse Best IP
+        run: |
+          best_ip=$(head -n 10 result.txt | awk 'NR==2 {print $1}')
+          echo "BEST_IP=$best_ip" >> $GITHUB_ENV
+          echo "最佳IP: $best_ip"
+
+      - name: Generate Subscription
+        run: |
+          cat > subscribe.txt << EOF
+          vmess://$(echo -n '{"v":"2","ps":"CF-Auto","add":"${{ env.BEST_IP }}","port":"443","id":"4dac7bd2-1777-4696-83a5-bb6c26813c8f","aid":"0","net":"ws","type":"none","host":"proxy.why2583.xyz","path":"/ws","tls":"tls"}' | base64 -w0)
+          EOF
+
+      - name: Commit Changes
+        run: |
+          git config --local user.email "action@github.com"
+          git config --local user.name "GitHub Action"
+          git add subscribe.txt
+          git commit -m "Update best IP: ${{ env.BEST_IP }}" || exit 0
+          git push
