@@ -2,42 +2,42 @@ name: CF优选IP
 
 on:
   schedule:
-    - cron: '0 */6 * * *'  # 每6小时运行一次
-  workflow_dispatch:  # 手动触发
+    - cron: '0 */6 * * *'
+  workflow_dispatch:
 
 jobs:
   optimize:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
 
       - name: Download CloudflareSpeedTest
         run: |
           wget https://github.com/XIU2/CloudflareSpeedTest/releases/latest/download/CloudflareSpeedTest_linux_amd64.tar.gz
           tar -xzf CloudflareSpeedTest_linux_amd64.tar.gz
+          chmod +x CloudflareSpeedTest
 
       - name: Run Speed Test
-        run: |
-          chmod +x CloudflareSpeedTest
-          ./CloudflareSpeedTest -n 200 -t 4 -tl 200 -sl 1 -p 0 > result.txt
+        run: ./CloudflareSpeedTest -n 200 -t 4 -tl 200 -sl 1 -p 0 > result.txt
 
-      - name: Parse Best IP
+      - name: Get Best IP
         run: |
-          best_ip=$(head -n 10 result.txt | awk 'NR==2 {print $1}')
+          best_ip=$(sed -n '2p' result.txt | awk '{print $1}')
           echo "BEST_IP=$best_ip" >> $GITHUB_ENV
-          echo "最佳IP: $best_ip"
+          echo "Best IP: $best_ip"
 
-      - name: Generate Subscription
+      - name: Generate Config
         run: |
-          cat > subscribe.txt << EOF
-          vmess://$(echo -n '{"v":"2","ps":"CF-Auto","add":"${{ env.BEST_IP }}","port":"443","id":"4dac7bd2-1777-4696-83a5-bb6c26813c8f","aid":"0","net":"ws","type":"none","host":"proxy.why2583.xyz","path":"/ws","tls":"tls"}' | base64 -w0)
-          EOF
+          vmess_config="{\"v\":\"2\",\"ps\":\"CF-Auto\",\"add\":\"${BEST_IP}\",\"port\":\"443\",\"id\":\"4dac7bd2-1777-4696-83a5-bb6c26813c8f\",\"aid\":\"0\",\"net\":\"ws\",\"type\":\"none\",\"host\":\"proxy.why2583.xyz\",\"path\":\"/ws\",\"tls\":\"tls\"}"
+          encoded=$(echo -n "$vmess_config" | base64 -w 0)
+          echo "vmess://${encoded}" > subscribe.txt
+          echo "Generated subscription"
 
-      - name: Commit Changes
+      - name: Commit
         run: |
-          git config --local user.email "action@github.com"
-          git config --local user.name "GitHub Action"
+          git config user.name "github-actions"
+          git config user.email "actions@github.com"
           git add subscribe.txt
-          git commit -m "Update best IP: ${{ env.BEST_IP }}" || exit 0
+          git diff --staged --quiet || git commit -m "Update IP: ${BEST_IP}"
           git push
