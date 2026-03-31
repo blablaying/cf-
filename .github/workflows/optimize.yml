@@ -9,47 +9,31 @@ jobs:
   optimize:
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
 
-      - name: Debug Info
+      - name: Setup
         run: |
-          uname -a
-          pwd
-          ls -la
+          curl -sL https://github.com/XIU2/CloudflareSpeedTest/releases/latest/download/CloudflareSpeedTest_linux_amd64.tar.gz | tar xz
+          chmod +x CloudflareSpeedTest
+          file CloudflareSpeedTest
 
-      - name: Download
+      - name: Test
         run: |
-          wget https://github.com/XIU2/CloudflareSpeedTest/releases/download/v2.2.5/CloudflareSpeedTest_linux_amd64.tar.gz -O cf.tar.gz
-          tar -xzf cf.tar.gz
-          ls -la
+          ./CloudflareSpeedTest -n 10 2>&1 | tee result.txt
 
-      - name: Run Test
+      - name: Build
         run: |
-          ./CloudflareSpeedTest -n 20 -t 2 -tl 300 -sl 1 -tp 443 > result.txt 2>&1 || echo "Exit: $?"
-          cat result.txt
+          ip=$(grep -oP '^\d+\.\d+\.\d+\.\d+' result.txt | head -1)
+          [ -z "$ip" ] && ip="1.1.1.1"
+          echo "IP=$ip"
+          cfg="{\"add\":\"$ip\",\"aid\":\"0\",\"host\":\"why2583.xyz\",\"id\":\"4dac7bd2-1777-4696-83a5-bb6c26813c8f\",\"net\":\"ws\",\"path\":\"/ws\",\"port\":\"443\",\"ps\":\"CF\",\"tls\":\"tls\",\"type\":\"none\",\"v\":\"2\"}"
+          echo "vmess://$(echo -n "$cfg" | base64 -w0)" > subscribe.txt
+          cat subscribe.txt
 
-      - name: Get IP
-        run: |
-          ip=$(awk '/^[0-9]/ {print $1; exit}' result.txt)
-          echo "IP: $ip"
-          echo "BEST_IP=$ip" >> $GITHUB_ENV
-
-      - name: Create Subscribe
-        run: |
-          if [ -n "$BEST_IP" ]; then
-            data="{\"v\":\"2\",\"ps\":\"CF\",\"add\":\"${BEST_IP}\",\"port\":\"443\",\"id\":\"4dac7bd2-1777-4696-83a5-bb6c26813c8f\",\"aid\":\"0\",\"net\":\"ws\",\"host\":\"why2583.xyz\",\"path\":\"/ws\",\"tls\":\"tls\"}"
-            echo "vmess://$(echo -n "$data" | base64 -w 0)" > subscribe.txt
-            echo "Generated: $(cat subscribe.txt)"
-          else
-            echo "No IP"
-            echo "vmess://placeholder" > subscribe.txt
-          fi
-
-      - name: Commit
+      - name: Save
         run: |
           git config user.name "bot"
-          git config user.email "bot@github.com"
-          git add subscribe.txt
-          git commit -m "update" || true
-          git push || true
+          git config user.email "a@b.com"
+          git add -A
+          git diff --cached --quiet || git commit -m "update"
+          git push
