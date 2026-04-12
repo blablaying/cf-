@@ -14,36 +14,57 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Test CF IPs
+      - name: Test IPs with curl
         run: |
+          uuid="4dac7bd2-1777-4696-83a5-bb6c26813c8f"
+          host="proxy.why2583.xyz"
+          
+          # CF IP列表
+          ips="1.1.1.1 1.0.0.1 104.16.132.229 104.16.133.229 104.18.0.1 104.18.1.1 172.64.0.1 172.64.1.1 104.21.0.1"
+          
+          echo "Testing CF IPs..."
           > results.txt
-          for ip in 1.1.1.1 1.0.0.1 104.16.132.229 104.16.133.229 104.18.0.1 104.18.1.1 172.64.0.1 172.64.1.1 104.21.0.1 104.21.1.1; do
-            t=$(ping -c 2 -W 2 $ip 2>/dev/null | tail -1 | awk -F'/' '{print $5}')
-            [ -n "$t" ] && echo "$t $ip" >> results.txt
+          
+          for ip in $ips; do
+            # 测试TCP连接速度
+            start=$(date +%s%N)
+            timeout 3 bash -c "echo >/dev/tcp/$ip/443" 2>/dev/null
+            if [ $? -eq 0 ]; then
+              end=$(date +%s%N)
+              time=$(( (end-start)/1000000 ))
+              echo "$time $ip" >> results.txt
+              echo "$ip: ${time}ms"
+            fi
           done
+          
+          # 取最快的5个
           sort -n results.txt | head -5 > best.txt
           cat best.txt
 
-      - name: Generate VLESS Subscribe
+      - name: Generate Subscribe
         run: |
-          : > subscribe.txt
+          uuid="4dac7bd2-1777-4696-83a5-bb6c26813c8f"
+          host="proxy.why2583.xyz"
+          
+          > subscribe.txt
           n=1
-          while read t ip; do
+          while read time ip; do
             [ -z "$ip" ] && continue
-            uuid="4dac7bd2-1777-4696-83a5-bb6c26813c8f"
-            host="proxy.why2583.xyz"
             echo "vless://${uuid}@${ip}:443?encryption=none&security=tls&sni=${host}&type=ws&host=${host}&path=%2F#CF-${n}" >> subscribe.txt
-            ((n++))
+            n=$((n+1))
           done < best.txt
           
+          # 如果没有测试结果，用默认IP
           if [ ! -s subscribe.txt ]; then
-            uuid="4dac7bd2-1777-4696-83a5-bb6c26813c8f"
-            host="proxy.why2583.xyz"
-            echo "vless://${uuid}@1.1.1.1:443?encryption=none&security=tls&sni=${host}&type=ws&host=${host}&path=%2F#CF-1" >> subscribe.txt
+            for ip in 1.1.1.1 1.0.0.1 104.16.132.229; do
+              echo "vless://${uuid}@${ip}:443?encryption=none&security=tls&sni=${host}&type=ws&host=${host}&path=%2F#CF-${n}" >> subscribe.txt
+              n=$((n+1))
+            done
           fi
+          
           cat subscribe.txt
 
       - uses: stefanzweifel/git-auto-commit-action@v5
         with:
-          commit_message: "update"
+          commit_message: "auto update"
           file_pattern: subscribe.txt
