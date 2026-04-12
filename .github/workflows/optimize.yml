@@ -31,14 +31,14 @@ jobs:
           while read t ip; do
             [ -z "$ip" ] && continue
             uuid="4dac7bd2-1777-4696-83a5-bb6c26813c8f"
-            host="amanda-commitments-enhance-archives.trycloudflare.com"
+            host="website-titten-rich-stays.trycloudflare.com"
             cfg="{\"v\":\"2\",\"ps\":\"CF-$n\",\"add\":\"$ip\",\"port\":\"443\",\"id\":\"$uuid\",\"aid\":\"0\",\"net\":\"ws\",\"type\":\"none\",\"host\":\"$host\",\"path\":\"/\",\"tls\":\"tls\",\"sni\":\"$host\"}"
             echo "vmess://$(echo -n "$cfg" | base64 -w0)" >> subscribe.txt
             ((n++))
           done < best.txt
           
           if [ ! -s subscribe.txt ]; then
-            host="amanda-commitments-enhance-archives.trycloudflare.com"
+            host="website-titten-rich-stays.trycloudflare.com"
             cfg="{\"v\":\"2\",\"ps\":\"CF-1\",\"add\":\"1.1.1.1\",\"port\":\"443\",\"id\":\"4dac7bd2-1777-4696-83a5-bb6c26813c8f\",\"aid\":\"0\",\"net\":\"ws\",\"type\":\"none\",\"host\":\"$host\",\"path\":\"/\",\"tls\":\"tls\",\"sni\":\"$host\"}"
             echo "vmess://$(echo -n "$cfg" | base64 -w0)" >> subscribe.txt
           fi
