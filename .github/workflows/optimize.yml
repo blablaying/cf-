@@ -24,7 +24,7 @@ jobs:
           sort -n results.txt | head -5 > best.txt
           cat best.txt
 
-      - name: Generate VMess Subscribe
+      - name: Generate VLESS Subscribe
         run: |
           : > subscribe.txt
           n=1
@@ -32,15 +32,14 @@ jobs:
             [ -z "$ip" ] && continue
             uuid="4dac7bd2-1777-4696-83a5-bb6c26813c8f"
             host="proxy.why2583.xyz"
-            cfg="{\"v\":\"2\",\"ps\":\"CF-$n\",\"add\":\"$ip\",\"port\":\"443\",\"id\":\"$uuid\",\"aid\":\"0\",\"net\":\"tcp\",\"type\":\"none\",\"host\":\"$host\",\"path\":\"\",\"tls\":\"tls\",\"sni\":\"$host\"}"
-            echo "vmess://$(echo -n "$cfg" | base64 -w0)" >> subscribe.txt
+            echo "vless://${uuid}@${ip}:443?encryption=none&security=tls&sni=${host}&type=ws&host=${host}&path=%2F#CF-${n}" >> subscribe.txt
             ((n++))
           done < best.txt
           
           if [ ! -s subscribe.txt ]; then
+            uuid="4dac7bd2-1777-4696-83a5-bb6c26813c8f"
             host="proxy.why2583.xyz"
-            cfg="{\"v\":\"2\",\"ps\":\"CF-1\",\"add\":\"1.1.1.1\",\"port\":\"443\",\"id\":\"4dac7bd2-1777-4696-83a5-bb6c26813c8f\",\"aid\":\"0\",\"net\":\"tcp\",\"type\":\"none\",\"host\":\"$host\",\"path\":\"\",\"tls\":\"tls\",\"sni\":\"$host\"}"
-            echo "vmess://$(echo -n "$cfg" | base64 -w0)" >> subscribe.txt
+            echo "vless://${uuid}@1.1.1.1:443?encryption=none&security=tls&sni=${host}&type=ws&host=${host}&path=%2F#CF-1" >> subscribe.txt
           fi
           cat subscribe.txt
 
