@@ -1,1 +1,1 @@
-vmess://eyJ2IjoiMiIsInBzIjoiQ0YtMSIsImFkZCI6IjEuMS4xLjEiLCJwb3J0IjoiNDQzIiwiaWQiOiI0ZGFjN2JkMi0xNzc3LTQ2OTYtODNhNS1iYjZjMjY4MTNjOGYiLCJhaWQiOiIwIiwibmV0IjoidGNwIiwidHlwZSI6Im5vbmUiLCJob3N0IjoicHJveHkud2h5MjU4My54eXoiLCJwYXRoIjoiIiwidGxzIjoidGxzIiwic25pIjoicHJveHkud2h5MjU4My54eXoifQ==
+vless://4dac7bd2-1777-4696-83a5-bb6c26813c8f@1.1.1.1:443?encryption=none&security=tls&sni=proxy.why2583.xyz&type=ws&host=proxy.why2583.xyz&path=%2F#CF-1
